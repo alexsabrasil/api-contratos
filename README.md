@@ -1,125 +1,113 @@
-# 📄 API de Contratos — Infraestrutura e Operações DevOps
+# API de Contratos - Infraestrutura DevOps
 
-Microsserviço responsável pela gestão, emissão e ciclo de vida de contratos corporativos, projetado com foco em resiliência, observabilidade e entrega contínua segura (DevSecOps).
+Projeto desenvolvido para executar uma API de contratos em ambiente containerizado, aplicando práticas de infraestrutura, automação e operação DevOps.
 
----
+## Arquitetura
 
-## 🛠️ Tecnologias Utilizadas
+A solução utiliza:
 
-A solução foi construída utilizando uma stack moderna, robusta e aderente aos padrões de mercado:
+- Node.js, TypeScript e Express para a API
+- PostgreSQL para persistência
+- Redis para cache
+- Docker e Docker Compose para containerização
+- Jest para testes automatizados
+- GitHub Actions para Integração Contínua (CI)
+- prom-client para exposição de métricas
 
-### Core & Aplicação
-* **Node.js & TypeScript**: Plataforma de execução assíncrona tipada estaticamente para garantir consistência e prevenção de erros em tempo de compilação.
-* **Express.js**: Framework minimalista para exposição de rotas e APIs RESTful.
-* **Jest**: Framework para testes unitários e de integração com cobertura de código.
+```text
+Cliente
+   |
+API Node.js
+   |
+   +-- PostgreSQL
+   +-- Redis
+   +-- /metrics
+```
 
-### Persistência & Cache
-* **PostgreSQL / TypeORM**: Banco de dados relacional para persistência transacional de dados contratuais com integridade referencial.
-* **Redis**: Camada de armazenamento em memória para caching distribuído, otimizando o tempo de resposta e reduzindo carga no banco de dados.
+## Como executar
 
-### Observabilidade & Métricas
-* **Prometheus Client (`prom-client`)**: Instrumentação de métricas nativas HTTP expostas através do middleware de métricas (`/metrics`) para monitoramento de latência, taxa de erros e throughput.
+Clone o repositório:
 
-### Infraestrutura, Conteinerização & DevSecOps
-* **Docker & Multi-Stage Builds**: Empacotamento de imagem mínima utilizando base Linux enxuta (`Alpine`) e execução sob usuário sem privilégios administrativos (`non-root`).
-* **Docker Compose**: Orquestração local para provisionamento da aplicação, Redis e banco de dados com isolamento por rede interna.
-* **GitHub Actions**: Pipeline de CI/CD para automação de testes, linting, build e varredura estática de segurança em contêineres.
+```bash
+git clone https://github.com/alexsabrasil/api-contratos.git
+cd api-contratos
+```
 
----
+Crie o arquivo de ambiente:
 
-## 🏗️ Justificativa de Arquitetura
+```bash
+cp .env.example .env
+```
 
-Conforme as diretrizes e boas práticas de DevOps e DevSecOps:
+Defina uma senha em `POSTGRES_PASSWORD` no arquivo `.env` e inicie os serviços:
 
-1. **Escalabilidade e Baixa Latência**: A separação das responsabilidades com **Redis** para cache alivia a carga de consultas frequentes sobre os contratos, permitindo que a API escale horizontalmente sem estrangular o banco de dados.
-2. **Observabilidade Nativa (Site Reliability Engineering)**: O uso de métricas via `prom-client` viabiliza o acompanhamento em tempo real de SLOs/SLIs (como erro rate e tempo de resposta) integrado com Prometheus/Grafana.
-3. **Segurança de Imagens em Camadas**: 
-   - Adoção de imagem base mínima (`node:alpine`) para mitigar superfícies de ataque decorrentes de pacotes extras do sistema operacional.
-   - Aplicação estrita do **Princípio do Menor Privilégio (PoLP)** dentro do contêiner, executando os processos com o usuário `node` em vez do usuário `root`.
-4. **Gerenciamento Seguro de Segredos**:
-   - Eliminação de qualquer *hardcoding* de senhas, credenciais de banco ou portas no código.
-   - Configurações e segredos são injetados exclusivamente em tempo de execução via **Variáveis de Ambiente** (`.env` ou secrets do CI/CD), atendendo às recomendações de conformidade e governança.
-
----
-
-## 📋 Pré-requisitos
-
-* [Git](https://git-scm.com/)
-* [Node.js 18+](https://nodejs.org/) (para execução e testes locais fora de contêiner)
-* [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/)
-
----
-
-## ⚙️ Variáveis de Ambiente
-
-Crie um arquivo `.env` na raiz do projeto com base no modelo:
-
-```env
-PORT=3000
-NODE_ENV=development
-
-# Banco de Dados
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=contratos_db
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
----
-
-## Como executar o projeto
-
-1. Execução Local com Docker Compose (Recomendado)
-Suba toda a infraestrutura (API, Banco e Redis) com apenas um comando:
-
-# Construir a imagem e iniciar os contêineres
+```bash
 docker compose up -d --build
+docker compose ps
+```
 
-# Visualizar logs em tempo real
-docker compose logs -f api
+A API ficará disponível em `http://localhost:3000`.
 
-A API estará acessível em: http://localhost:3000
+## Como testar
 
-2. Execução Local para Desenvolvimento (Sem Docker)
+Métricas da aplicação:
 
-# Instalar as dependências
-npm install
+```bash
+curl http://localhost:3000/metrics
+```
 
-# Compilar o TypeScript e rodar em modo desenvolvimento
-npm run dev
+Criação de contrato:
 
-## Testes Automatizados
+```bash
+curl -X POST http://localhost:3000/contracts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Contrato Teste",
+    "userId": "user-001",
+    "description": "Teste da infraestrutura",
+    "value": 1500
+  }'
+```
 
-O repositório conta com testes unitários focados nas regras de negócio dos serviços:
+Testes automatizados e build:
 
-# Executar a suíte de testes
+```bash
+npm ci
 npm test
+npm run build
+```
 
-# Executar com relatório de cobertura (coverage)
-npm test -- --coverage
+## Automação
 
-## Endpoints Principais
+O workflow `.github/workflows/ci.yml` executa automaticamente em pushes e pull requests para a branch `main`:
 
-MétodoRotaDescriçãoGET/healthHealthcheck da aplicaçãoGET/metricsMétricas operacionais em formato PrometheusGET/contractsLista contratos cadastradosPOST/contractsCria um novo contratoGET/contracts/:idConsulta detalhes de um contrato
+```text
+npm ci -> npm test -> npm run build -> Docker build
+```
 
-## Práticas de Segurança Aplicada
+## Justificativa da Arquitetura
 
-- Não-Root User: Contêiner configurado com instrução USER node.
-- Análise Estática de Vulnerabilidades: Pipeline integrado com ferramentas como Grype/Trivy para detecção precoce de CVEs em dependências e camadas Docker.
-- Proteção de Segredos: Arquivo .gitignore devidamente configurado para evitar o vazamento de arquivos .env e credenciais sensíveis no histórico do Git.
+**Escalabilidade:** API, PostgreSQL e Redis são serviços separados, facilitando a evolução dos componentes. O Redis fornece cache para reduzir acessos repetitivos ao banco.
+
+**Segurança:** As credenciais são fornecidas por variáveis de ambiente. O arquivo `.env` não é versionado e a aplicação executa no contêiner com usuário não-root.
+
+**Confiabilidade:** PostgreSQL e Redis possuem volumes persistentes, o PostgreSQL utiliza healthcheck e os serviços possuem política de reinicialização. Os testes automatizados validam a aplicação e a CI verifica os testes, a compilação e a construção da imagem Docker. 
+
+
+
+## Encerrar o ambiente
+
+```bash
+docker compose down
+```
 
 ---
 
-### Como salvar e commitar:
-No terminal da pasta `api-contratos`:
+## Atividade Prática do curso DevOps | FAP 
 
-```powershell
-# Crie/atualize o README.md e envie para o GitHub:
-git add README.md
-git commit -m "docs: add comprehensive DevOps README and architecture justification"
-git push
+### Professor
+Bruno Álexys
+
+### Aluna/Treinanda
+Alê Tavares
 
